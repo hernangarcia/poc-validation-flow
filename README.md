@@ -1,12 +1,5 @@
 # Setup Information
 
-## Using AWS SAM
-
-Deploy the source from you local development environment. Please note, this requires the following environment setup.
-
-<details>
-<summary><strong>Deploy from Source(expand for details)</strong></summary><p>
-
 ### Requirements
 
 * [aws-cli](https://aws.amazon.com/cli/) already configured with Administrator permissions.
@@ -14,7 +7,6 @@ Deploy the source from you local development environment. Please note, this requ
 * [Docker installed](https://www.docker.com/community-edition)
 * [Python 3.7 or greater](https://realpython.com/installing-python/)
 
-<br/>
 <details>
 <summary><strong>Installing SAM CLI</strong></summary><p>
 
@@ -37,8 +29,6 @@ You can now download an MSI to install SAM CLI on Windows. Get the MSI you need 
 * [32-bit](https://github.com/awslabs/aws-sam-cli/releases/download/v0.6.2/AWS_SAM_CLI_32_PY3.msi)
 
 </p></details>
-
-<br/>
 
 ### Clone the repository
 
@@ -63,4 +53,4 @@ sam deploy --guided
 ```
 
 ## Testing
-
+TDB
