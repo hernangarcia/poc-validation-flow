@@ -1,0 +1,14 @@
+Kinesis Stream Data Generator
+https://awslabs.github.io/amazon-kinesis-data-generator/web/producer.html?upid=us-west-2_AxStilZeL&ipid=us-west-2:0e5ae634-f253-4dcd-9693-323229345a22&cid=5614fu25i40mmjfreq33s1j04&r=us-west-2
+
+
+Template
+{
+    "id": {{random.number(1000)}},
+    "type": "{{random.arrayElement(
+        ["SELL","BUY"]
+    )}}",
+    "price": {{random.number(5000)}},
+    "qty": {{random.number(10)}},
+    "timestamp": "{{date.now}}"
+}

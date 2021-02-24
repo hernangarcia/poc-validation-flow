@@ -1,0 +1,195 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  flash-serverless-poc
+
+  Sample SAM Template for flash-serverless-poc
+
+Globals:
+  Function:
+    Tracing: Active
+    Environment:
+      Variables:
+        POWERTOOLS_METRICS_NAMESPACE: "bvc-precia"
+        POWERTOOLS_SERVICE_NAME: "flash"
+  Api:
+     TracingEnabled: true
+
+Resources:
+  StockStreamConsumerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/stock_stream_consumer/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      Timeout: 10
+      Events:
+        Stream:
+          Type: Kinesis
+          Properties:
+            Stream: !GetAtt StockOpsInputStream.Arn
+            BatchSize: 1
+            StartingPosition: LATEST
+      Policies:
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt StockOpsValidationStateMachine.Name
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Ref StockOpsValidationStateMachine
+  
+  StockOpsInputStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      ShardCount: 1
+
+  EventDeliveryStream:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: KinesisStreamAsSource
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt StockOpsInputStream.Arn
+        RoleARN: !GetAtt EventDeliveryStreamRole.Arn
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !GetAtt DeliveryS3Bucket.Arn
+        RoleARN: !GetAtt EventDeliveryStreamRole.Arn
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 1
+        CompressionFormat: UNCOMPRESSED
+        Prefix: "BVC-Flash/"
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: "bvc-flash-event-delivery-group"
+          LogStreamName: "bvc-flash-event-delivery-log"
+  
+  EventDeliveryStreamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "firehose.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "EventDeliveryStreamRolePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                Resource:
+                  - !Sub arn:aws:s3:::${DeliveryS3Bucket}
+                  - !Sub arn:aws:s3:::${DeliveryS3Bucket}/*
+              - Effect: Allow
+                Action:
+                  - "kinesis:DescribeStream"
+                  - "kinesis:GetShardIterator"
+                  - "kinesis:GetRecords"
+                Resource:
+                  - !GetAtt StockOpsInputStream.Arn
+  
+  DeliveryS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+  StockOpsValidationStateMachine:
+    Type: AWS::Serverless::StateMachine
+    DependsOn: StockOpsValidationStateMachineLogGroup
+    Properties:
+      DefinitionUri: statemachine/stock_trader.asl.json
+      DefinitionSubstitutions:
+        StockBaseFiltersFunctionArn: !GetAtt StockBaseFiltersFunction.Arn
+        StockAssociationFunctionArn: !GetAtt StockAssociationFunction.Arn
+        StockFiltersFunctionArn: !GetAtt StockFiltersFunction.Arn
+        StockCurvesFunctionArn: !GetAtt StockCurvesFunction.Arn
+        StockMarginsFunctionArn: !GetAtt StockMarginsFunction.Arn
+        StockPricesFunctionArn: !GetAtt StockPricesFunction.Arn
+        DDBPutItem: arn:aws:states:::dynamodb:putItem
+        DDBTable: !Ref StockTransactionTable
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref StockBaseFiltersFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref StockAssociationFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref StockFiltersFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref StockCurvesFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref StockMarginsFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref StockPricesFunction
+        - DynamoDBWritePolicy:
+            TableName: !Ref StockTransactionTable
+        - CloudWatchLogsFullAccess
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+             LogGroupArn: !GetAtt StockOpsValidationStateMachineLogGroup.Arn
+        IncludeExecutionData: false
+        Level: 'ALL'
+            
+  StockOpsValidationStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+
+  StockBaseFiltersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/stock_base_filters/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+
+  StockAssociationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/stock_association/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+
+  StockFiltersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/stock_filters/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      
+  StockCurvesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/stock_curves/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      
+  StockMarginsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/stock_margins/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      
+  StockPricesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/stock_prices/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+
+  StockTransactionTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: Id
+        Type: Number
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1

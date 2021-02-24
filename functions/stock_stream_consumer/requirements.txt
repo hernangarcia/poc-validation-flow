@@ -1,0 +1,5 @@
+boto3==1.10.34
+requests==2.22.0
+wrapt==1.12.1
+future==0.18.2
+aws-lambda-powertools

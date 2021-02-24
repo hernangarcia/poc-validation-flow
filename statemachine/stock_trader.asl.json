@@ -1,0 +1,67 @@
+{
+  "Comment": "BVC - Flash - Stock Operation Validation State Machine",
+  "StartAt": "Base Filter",
+  "States": {
+    "Base Filter": {
+      "Type": "Task",
+      "Resource": "${StockBaseFiltersFunctionArn}",
+      "ResultPath": "$.checks.baseFilter",
+      "Next": "Association"
+    },
+    "Association": {
+      "Type": "Task",
+      "Resource": "${StockAssociationFunctionArn}",
+      "ResultPath": "$.checks.association",
+      "Next": "Filters"
+    },
+    "Filters": {
+      "Type": "Task",
+      "Resource": "${StockFiltersFunctionArn}",
+      "ResultPath": "$.checks.filters",
+      "Next": "Curves"
+    },
+    "Curves": {
+      "Type": "Task",
+      "Resource": "${StockCurvesFunctionArn}",
+      "ResultPath": "$.checks.curves",
+      "Next": "Margins"
+    },
+    "Margins": {
+      "Type": "Task",
+      "Resource": "${StockMarginsFunctionArn}",
+      "ResultPath": "$.checks.margins",
+      "Next": "Prices"
+    },
+    "Prices": {
+      "Type": "Task",
+      "Resource": "${StockPricesFunctionArn}",
+      "ResultPath": "$.checks.prices",
+      "Next": "Save Result"
+    },
+    "Save Result": {
+      "Type": "Task",
+      "Resource": "${DDBPutItem}",
+      "Parameters": {
+        "TableName": "${DDBTable}",
+        "Item": {
+          "Id": {
+            "N.$": "$.id"
+          },
+          "Type": {
+            "S.$": "$.type"
+          },
+          "Price": {
+            "N.$": "$.price"
+          },
+          "Quantity": {
+            "N.$": "$.qty"
+          },
+          "Timestamp": {
+            "S.$": "$.timestamp"
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}
