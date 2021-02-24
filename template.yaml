@@ -10,7 +10,7 @@ Globals:
     Tracing: Active
     Environment:
       Variables:
-        POWERTOOLS_METRICS_NAMESPACE: "bvc-precia"
+        POWERTOOLS_METRICS_NAMESPACE: "services"
         POWERTOOLS_SERVICE_NAME: "flash"
   Api:
      TracingEnabled: true
@@ -56,11 +56,11 @@ Resources:
           IntervalInSeconds: 60
           SizeInMBs: 1
         CompressionFormat: UNCOMPRESSED
-        Prefix: "BVC-Flash/"
+        Prefix: "flash/"
         CloudWatchLoggingOptions:
           Enabled: true
-          LogGroupName: "bvc-flash-event-delivery-group"
-          LogStreamName: "bvc-flash-event-delivery-log"
+          LogGroupName: "flash-event-delivery-group"
+          LogStreamName: "flash-event-delivery-log"
   
   EventDeliveryStreamRole:
     Type: AWS::IAM::Role
